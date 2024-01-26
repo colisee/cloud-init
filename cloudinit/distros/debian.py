@@ -300,4 +300,4 @@ def regenerate_locale(locale, sys_path, keyname="LANG"):
 
     # finally, trigger regeneration
     LOG.debug("Generating locales for %s", locale)
-    subp.subp(["locale-gen", locale], capture=False)
+    subp.subp(["locale-gen"], capture=False)

@@ -298,6 +298,19 @@ def regenerate_locale(locale, sys_path, keyname="LANG"):
         LOG.debug("%s=%s does not require rengeneration", keyname, locale)
         return
 
+    # Declare locale by uncommenting its line in /etc/locale.gen
+    LOG.debug("Declaring locale %s", locale)
+    subp.subp(
+        [
+            "sed",
+            "-i",
+            "/etc/locale.gen",
+            "-e",
+            "s/^# %s/%s/" % (locale, locale),
+        ],
+        capture=False,
+    )
+
     # finally, trigger regeneration
     LOG.debug("Generating locales for %s", locale)
     subp.subp(["locale-gen"], capture=False)

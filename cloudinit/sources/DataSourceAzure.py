@@ -986,7 +986,7 @@ class DataSourceAzure(sources.DataSource):
         )
         system_uuid = identity.query_system_uuid()
         if os.path.exists(prev_iid_path):
-            previous = util.load_file(prev_iid_path).strip()
+            previous = util.load_text_file(prev_iid_path).strip()
             swapped_id = identity.byte_swap_system_uuid(system_uuid)
 
             # Older kernels than 4.15 will have UPPERCASE product_uuid.
@@ -1899,12 +1899,12 @@ def _get_random_seed(source=PLATFORM_ENTROPY_SOURCE):
     # now update ds_cfg to reflect contents pass in config
     if source is None:
         return None
-    seed = util.load_file(source, quiet=True, decode=False)
+    seed = util.load_binary_file(source, quiet=True)
 
-    # The seed generally contains non-Unicode characters. load_file puts
+    # The seed generally contains non-Unicode characters. load_binary_file puts
     # them into bytes (in python 3).
-    # bytes is a non-serializable type, and the handler load_file
-    # uses applies b64 encoding *again* to handle it. The simplest solution
+    # bytes is a non-serializable type, and the handler
+    # used applies b64 encoding *again* to handle it. The simplest solution
     # is to just b64encode the data and then decode it to a serializable
     # string. Same number of bits of entropy, just with 25% more zeroes.
     # There's no need to undo this base64-encoding when the random seed is

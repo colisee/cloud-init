@@ -36,7 +36,12 @@ from cloudinit.handlers import INCLUSION_TYPES_MAP, type_from_starts_with
 from cloudinit.helpers import Paths
 from cloudinit.sources import DataSourceNotFoundException
 from cloudinit.temp_utils import mkdtemp
-from cloudinit.util import error, get_modules_from_dir, load_file, write_file
+from cloudinit.util import (
+    error,
+    get_modules_from_dir,
+    load_text_file,
+    write_file,
+)
 
 try:
     from jsonschema import ValidationError as _ValidationError
@@ -609,9 +614,6 @@ def netplan_validate_network_schema(
     @raises: SchemaValidationError when netplan's parser raises
         NetplanParserExceptions.
     """
-    if network_schema_version(network_config) != 2:
-        return False  # Netplan only validates network version 2 config
-
     try:
         from netplan import NetplanParserException, Parser  # type: ignore
     except ImportError:
@@ -715,11 +717,16 @@ def validate_cloudconfig_schema(
         NETWORK_CONFIG
     """
     if schema_type == SchemaType.NETWORK_CONFIG:
-        if netplan_validate_network_schema(
-            network_config=config, strict=strict, log_details=log_details
-        ):
-            # Schema was validated by netplan
-            return True
+        if network_schema_version(config) == 2:
+            if netplan_validate_network_schema(
+                network_config=config, strict=strict, log_details=log_details
+            ):
+                # Schema was validated by netplan
+                return True
+            # network-config schema version 2 but no netplan.
+            # TODO(add JSON schema definition for network version 2)
+            return False
+
     if schema is None:
         schema = get_schema(schema_type)
     try:
@@ -1049,7 +1056,7 @@ def validate_cloudconfig_file(
     :raises SchemaValidationError containing any of schema_errors encountered.
     :raises RuntimeError when config_path does not exist.
     """
-    decoded_content = load_file(config_path, decode=True)
+    decoded_content = load_text_file(config_path)
     if not decoded_content:
         print(
             "Empty '%s' found at %s. Nothing to validate."
@@ -1558,7 +1565,7 @@ def get_schema(schema_type: SchemaType = SchemaType.CLOUD_CONFIG) -> dict:
     )
     full_schema = None
     try:
-        full_schema = json.loads(load_file(schema_file))
+        full_schema = json.loads(load_text_file(schema_file))
     except (IOError, OSError):
         LOG.warning(
             "Skipping %s schema valiation. No JSON schema file found %s.",

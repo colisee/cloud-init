@@ -19,7 +19,12 @@ from cloudinit.sources import UNSET
 from cloudinit.sources import DataSourceAzure as dsaz
 from cloudinit.sources.azure import errors, identity, imds
 from cloudinit.sources.helpers import netlink
-from cloudinit.util import MountFailedError, load_file, load_json, write_file
+from cloudinit.util import (
+    MountFailedError,
+    load_json,
+    load_text_file,
+    write_file,
+)
 from tests.unittests.helpers import (
     CiTestCase,
     ExitStack,
@@ -201,15 +206,13 @@ def mock_kvp_report_success_to_host():
 def mock_net_dhcp_maybe_perform_dhcp_discovery():
     with mock.patch(
         "cloudinit.net.ephemeral.maybe_perform_dhcp_discovery",
-        return_value=[
-            {
-                "unknown-245": "0a:0b:0c:0d",
-                "interface": "ethBoot0",
-                "fixed-address": "192.168.2.9",
-                "routers": "192.168.2.1",
-                "subnet-mask": "255.255.255.0",
-            }
-        ],
+        return_value={
+            "unknown-245": "0a:0b:0c:0d",
+            "interface": "ethBoot0",
+            "fixed-address": "192.168.2.9",
+            "routers": "192.168.2.1",
+            "subnet-mask": "255.255.255.0",
+        },
         autospec=True,
     ) as m:
         yield m
@@ -308,7 +311,7 @@ def mock_util_find_devs_with():
 @pytest.fixture
 def mock_util_load_file():
     with mock.patch(
-        MOCKPATH + "util.load_file",
+        MOCKPATH + "util.load_binary_file",
         autospec=True,
         return_value=b"",
     ) as m:
@@ -1055,7 +1058,6 @@ class TestAzureDataSource(CiTestCase):
                 mock.MagicMock(),
             )
         )
-        super(TestAzureDataSource, self).setUp()
 
     def apply_patches(self, patches):
         for module, name, new in patches:
@@ -1873,7 +1875,7 @@ scbus-1 on xpt0 bus 0
         ovf_env_path = os.path.join(self.waagent_d, "ovf-env.xml")
 
         # The XML should not be same since the user password is redacted
-        on_disk_ovf = load_file(ovf_env_path)
+        on_disk_ovf = load_text_file(ovf_env_path)
         self.xml_notequals(data["ovfcontent"], on_disk_ovf)
 
         # Make sure that the redacted password on disk is not used by CI
@@ -1896,7 +1898,7 @@ scbus-1 on xpt0 bus 0
         # we expect that the ovf-env.xml file is copied there.
         ovf_env_path = os.path.join(self.waagent_d, "ovf-env.xml")
         self.assertTrue(os.path.exists(ovf_env_path))
-        self.xml_equals(xml, load_file(ovf_env_path))
+        self.xml_equals(xml, load_text_file(ovf_env_path))
 
     def test_ovf_can_include_unicode(self):
         xml = construct_ovf_env()
